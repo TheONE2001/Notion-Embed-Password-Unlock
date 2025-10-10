@@ -5,9 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Notion 嵌入 - 密码解锁内容</title>
   <style>
-    :root {
-      color-scheme: light dark;
-    }
+    :root { color-scheme: light dark; }
     body {
       margin: 0;
       font-family: system-ui, -apple-system, Segoe UI, Roboto, PingFang SC, Helvetica, Arial;
@@ -23,28 +21,28 @@
       }
       .card { background: #1e293b; box-shadow: 0 6px 16px rgba(0,0,0,0.3); }
       textarea, input { background: #0f172a; color: #e2e8f0; border: 1px solid #334155; }
+      .copy-btn, .reset-btn { background: #334155; color: #e2e8f0; }
     }
     .container { display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
     .card {
       width: 100%; max-width: 720px; padding: 24px; border-radius: 16px; background: #ffffff;
       box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08);
     }
-    h1 { font-size: 1.4rem; margin-bottom: 4px; }
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    h1 { font-size: 1.4rem; margin: 0; }
     small { color: #64748b; }
-    .tabs { display: flex; margin: 16px 0; border-bottom: 1px solid #e2e8f0; }
-    .tab {
-      flex: 1; text-align: center; padding: 8px 0; cursor: pointer; transition: all 0.3s;
-      font-weight: 500; border-radius: 8px 8px 0 0;
+    .reset-btn {
+      background: #f1f5f9; color: #2563eb; border: none; border-radius: 8px; padding: 6px 10px;
+      font-size: 0.9rem; cursor: pointer; transition: background 0.2s;
     }
+    .reset-btn:hover { background: #e2e8f0; }
+    .tabs { display: flex; margin: 16px 0; border-bottom: 1px solid #e2e8f0; }
+    .tab { flex: 1; text-align: center; padding: 8px 0; cursor: pointer; transition: all 0.3s; font-weight: 500; border-radius: 8px 8px 0 0; }
     .tab.active { background: #2563eb; color: white; }
     textarea, input[type=password], input[type=text] {
-      width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; margin-top: 6px;
-      resize: vertical; font-size: 0.95rem;
+      width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; margin-top: 6px; resize: vertical; font-size: 0.95rem;
     }
-    button {
-      border: none; padding: 10px 16px; border-radius: 8px; font-weight: 500; cursor: pointer;
-      transition: all 0.2s; font-size: 0.95rem;
-    }
+    button { border: none; padding: 10px 16px; border-radius: 8px; font-weight: 500; cursor: pointer; transition: all 0.2s; font-size: 0.95rem; }
     button.primary { background: #2563eb; color: white; }
     button.primary:hover { background: #1d4ed8; }
     button.ghost { background: #f1f5f9; color: #1e40af; }
@@ -54,9 +52,11 @@
       background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; margin-top: 8px;
       white-space: pre-wrap; word-break: break-all;
     }
+    .copy-row { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; }
     .copy-btn {
-      float: right; background: none; border: none; color: #2563eb; cursor: pointer; font-size: 0.9rem;
+      background: #f1f5f9; color: #2563eb; border: none; border-radius: 6px; padding: 6px 10px; font-size: 0.9rem; cursor: pointer; transition: background 0.2s;
     }
+    .copy-btn:hover { background: #e2e8f0; }
     .toast {
       position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
       background: #2563eb; color: white; padding: 10px 20px; border-radius: 8px;
@@ -69,8 +69,13 @@
 <body>
   <div class="container">
     <div class="card">
-      <h1>Notion 嵌入 — 密码解锁页面</h1>
-      <small>前端加密 · PBKDF2 + AES-GCM（本地加密解密）</small>
+      <header>
+        <div>
+          <h1>Notion 嵌入 — 密码解锁页面</h1>
+          <small>前端加密 · PBKDF2 + AES-GCM（本地加密解密）</small>
+        </div>
+        <button class="reset-btn" id="reset-all">🔄 重置页面</button>
+      </header>
 
       <div class="tabs">
         <div class="tab active" id="tab-encrypt">🔒 加密</div>
@@ -81,16 +86,16 @@
         <label>明文内容：</label>
         <textarea id="plaintext" placeholder="输入你想加密的文本"></textarea>
         <label>密码：</label>
-        <input id="enc-password" type="password" placeholder="设置一个强口令">
+        <input id="enc-password" type="password" placeholder="设置一个口令">
         <div class="row">
           <button class="primary" id="btn-encrypt">生成密文</button>
           <button class="ghost" id="btn-clear-enc">清空</button>
         </div>
-        <label>密文：</label>
-        <div class="output-box">
+        <div class="copy-row">
+          <label>密文：</label>
           <button class="copy-btn" id="copy-cipher">复制</button>
-          <div id="ciphertext-output"></div>
         </div>
+        <div class="output-box" id="ciphertext-output"></div>
       </div>
 
       <div id="decrypt-view" style="display:none;">
@@ -102,30 +107,32 @@
           <button class="primary" id="btn-decrypt">解密显示明文</button>
           <button class="ghost" id="btn-clear-dec">清空</button>
         </div>
-        <label>明文：</label>
-        <div class="output-box">
+        <div class="copy-row">
+          <label>明文：</label>
           <button class="copy-btn" id="copy-plain">复制</button>
-          <div id="plaintext-output"></div>
         </div>
+        <div class="output-box" id="plaintext-output"></div>
       </div>
 
-      <footer>
-        免责声明：此页面仅供个人使用示例。请勿用于高敏感信息存储。明文仅在本地浏览器内处理。
-      </footer>
+      <footer>免责声明：此页面仅供个人使用示例。请勿用于高敏感信息存储。明文仅在本地浏览器内处理。</footer>
     </div>
   </div>
 
   <div id="toast" class="toast"></div>
 
   <script>
-    // Utility for toast
-    function showToast(msg){
-      const t=document.getElementById('toast');
-      t.textContent=msg; t.classList.add('show');
-      setTimeout(()=>t.classList.remove('show'),2000);
+    function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000);}
+
+    async function safeCopy(text){
+      try { await navigator.clipboard.writeText(text); showToast('已复制'); }
+      catch {
+        const temp=document.createElement('textarea'); temp.value=text; document.body.appendChild(temp); temp.select();
+        try { document.execCommand('copy'); showToast('已复制'); }
+        catch { showToast('复制失败'); }
+        document.body.removeChild(temp);
+      }
     }
 
-    // Tab switching
     const tabEncrypt=document.getElementById('tab-encrypt');
     const tabDecrypt=document.getElementById('tab-decrypt');
     const encView=document.getElementById('encrypt-view');
@@ -146,13 +153,11 @@
     const ptOut=document.getElementById('plaintext-output');
     const copyPlain=document.getElementById('copy-plain');
     const clearDec=document.getElementById('btn-clear-dec');
+    const resetAll=document.getElementById('reset-all');
 
     const encoder=new TextEncoder(); const decoder=new TextDecoder();
     function randBytes(len){const b=new Uint8Array(len);crypto.getRandomValues(b);return b;}
-    async function deriveKey(password,salt){
-      const baseKey=await crypto.subtle.importKey('raw',encoder.encode(password),{name:'PBKDF2'},false,['deriveKey']);
-      return await crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:250000,hash:'SHA-256'},baseKey,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
-    }
+    async function deriveKey(password,salt){const baseKey=await crypto.subtle.importKey('raw',encoder.encode(password),{name:'PBKDF2'},false,['deriveKey']);return await crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:250000,hash:'SHA-256'},baseKey,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);}
     function concatUint8(arr){let len=0;for(const a of arr)len+=a.byteLength;const o=new Uint8Array(len);let off=0;for(const a of arr){o.set(new Uint8Array(a),off);off+=a.byteLength;}return o;}
     function toB64(u8){let s='';const ch=0x8000;for(let i=0;i<u8.length;i+=ch){s+=String.fromCharCode.apply(null,u8.subarray(i,i+ch));}return btoa(s);}
     function fromB64(b64){const bin=atob(b64);const len=bin.length;const bytes=new Uint8Array(len);for(let i=0;i<len;i++)bytes[i]=bin.charCodeAt(i);return bytes;}
@@ -180,10 +185,12 @@
       finally{decBtn.disabled=false; decBtn.textContent='解密显示明文';}
     }
 
-    copyCipher.onclick=()=>{const t=ctOut.textContent;if(!t){showToast('无密文');return;}navigator.clipboard.writeText(t).then(()=>{showToast('密文已复制');});}
-    copyPlain.onclick=()=>{const t=ptOut.textContent;if(!t){showToast('无明文');return;}navigator.clipboard.writeText(t).then(()=>{showToast('明文已复制');});}
+    copyCipher.onclick=()=>{const t=ctOut.textContent;if(!t){showToast('无密文');return;}safeCopy(t);}
+    copyPlain.onclick=()=>{const t=ptOut.textContent;if(!t){showToast('无明文');return;}safeCopy(t);}
+
     clearEnc.onclick=()=>{pt.value='';encPwd.value='';ctOut.textContent='';}
     clearDec.onclick=()=>{ct.value='';decPwd.value='';ptOut.textContent='';}
+    resetAll.onclick=()=>{pt.value='';encPwd.value='';ctOut.textContent='';ct.value='';decPwd.value='';ptOut.textContent='';showToast('所有页面内容已重置');}
   </script>
 </body>
 </html>
