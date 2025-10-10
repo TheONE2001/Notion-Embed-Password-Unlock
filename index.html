@@ -1,21 +1,3 @@
-<!--
-Notion-Embed-Password-Unlock.html
-
-说明（请阅读）：
-1) 这是一个单文件静态网页（HTML + JS），实现前端 AES-GCM 加密/解密，使用 PBKDF2 从密码派生密钥。
-2) 前端加密/解密，**不会将密码或明文发送到任何服务器**（除非你自己把页面接入了服务器端代码）。
-3) 使用方法：
-   - 部署到静态托管（Vercel / Netlify / GitHub Pages / Glitch 等）。
-   - 在 Notion 中使用 /embed 嵌入该页面的 URL（或者将页面的 URL 放在 Embed 块里）。
-   - 嵌入后，页面会显示一个解密界面，用户需要粘贴密文并输入密码来解密（也可以在原页面中将密文预置到“密文”文本框）。
-4) 安全提醒：
-   - 明文只在浏览器内处理；密文包含随机盐（16字节）和随机 IV（12字节）。
-   - 密文是 base64 编码的：salt(16) + iv(12) + ciphertext.
-   - 如果你希望更方便地 "打开即看"，可以把密文直接放到页面（HTML）里，但这会让任何能访问该 HTML 的人复制并尝试解密；真正的安全来自于强密码（推荐使用足够长度与复杂度）。
-
-如果你愿意，我也可以把这个文件打包成一个可以直接部署到 Vercel/Netlify 的仓库结构（含 README 与部署说明）。
--->
-
 <!doctype html>
 <html lang="zh-CN">
 <head>
@@ -23,225 +5,185 @@ Notion-Embed-Password-Unlock.html
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Notion 嵌入 - 密码解锁内容</title>
   <style>
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,"PingFang SC","Hiragino Sans GB","Microsoft Yahei",Arial;line-height:1.5;padding:18px;background:#fbfcfd;color:#0b1220}
-    .card{max-width:820px;margin:12px auto;padding:18px;border-radius:12px;background:#fff;box-shadow:0 6px 20px rgba(12,20,40,0.06)}
-    textarea{width:100%;min-height:120px;padding:10px;border-radius:8px;border:1px solid #e6edf3}
-    input[type=password], input[type=text]{width:100%;padding:10px;border-radius:8px;border:1px solid #e6edf3}
-    .row{display:flex;gap:10px}
-    button{padding:8px 12px;border-radius:8px;border:0;background:#2563eb;color:white;cursor:pointer}
-    button.ghost{background:#eef4ff;color:#0640a8}
-    small{color:#6b7280}
-    .output{white-space:pre-wrap;background:#0f1724;color:#e6eef8;padding:12px;border-radius:8px}
-    .hint{padding:8px;border-radius:8px;background:#fff8e6;color:#6a4b00}
-    .flex-between{display:flex;justify-content:space-between;align-items:center}
+    :root {
+      color-scheme: light dark;
+    }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, PingFang SC, Helvetica, Arial;
+      line-height: 1.5;
+      background: linear-gradient(135deg, #f8fafc, #eef2ff);
+      color: #1e293b;
+      transition: background 0.3s, color 0.3s;
+    }
+    @media (prefers-color-scheme: dark) {
+      body {
+        background: linear-gradient(135deg, #0f172a, #1e293b);
+        color: #e2e8f0;
+      }
+      .card { background: #1e293b; box-shadow: 0 6px 16px rgba(0,0,0,0.3); }
+      textarea, input { background: #0f172a; color: #e2e8f0; border: 1px solid #334155; }
+    }
+    .container { display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+    .card {
+      width: 100%; max-width: 720px; padding: 24px; border-radius: 16px; background: #ffffff;
+      box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08);
+    }
+    h1 { font-size: 1.4rem; margin-bottom: 4px; }
+    small { color: #64748b; }
+    .tabs { display: flex; margin: 16px 0; border-bottom: 1px solid #e2e8f0; }
+    .tab {
+      flex: 1; text-align: center; padding: 8px 0; cursor: pointer; transition: all 0.3s;
+      font-weight: 500; border-radius: 8px 8px 0 0;
+    }
+    .tab.active { background: #2563eb; color: white; }
+    textarea, input[type=password], input[type=text] {
+      width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; margin-top: 6px;
+      resize: vertical; font-size: 0.95rem;
+    }
+    button {
+      border: none; padding: 10px 16px; border-radius: 8px; font-weight: 500; cursor: pointer;
+      transition: all 0.2s; font-size: 0.95rem;
+    }
+    button.primary { background: #2563eb; color: white; }
+    button.primary:hover { background: #1d4ed8; }
+    button.ghost { background: #f1f5f9; color: #1e40af; }
+    button.ghost:hover { background: #e2e8f0; }
+    .row { display: flex; gap: 8px; margin-top: 10px; }
+    .output-box {
+      background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; margin-top: 8px;
+      white-space: pre-wrap; word-break: break-all;
+    }
+    .copy-btn {
+      float: right; background: none; border: none; color: #2563eb; cursor: pointer; font-size: 0.9rem;
+    }
+    .toast {
+      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+      background: #2563eb; color: white; padding: 10px 20px; border-radius: 8px;
+      opacity: 0; transition: opacity 0.4s;
+    }
+    .toast.show { opacity: 1; }
+    footer { font-size: 0.8rem; margin-top: 16px; color: #64748b; text-align: center; }
   </style>
 </head>
 <body>
-  <div class="card">
-    <div class="flex-between">
-      <h2>Notion 嵌入 — 密码解锁页面</h2>
-      <small>前端加密 · PBKDF2 + AES-GCM</small>
-    </div>
+  <div class="container">
+    <div class="card">
+      <h1>Notion 嵌入 — 密码解锁页面</h1>
+      <small>前端加密 · PBKDF2 + AES-GCM（本地加密解密）</small>
 
-    <p>用途：把密文放在 Notion 页面里，或者在嵌入页面时手动粘贴密文，用户在 Notion 内嵌入的 iframe 中输入密码即可查看明文。</p>
+      <div class="tabs">
+        <div class="tab active" id="tab-encrypt">🔒 加密</div>
+        <div class="tab" id="tab-decrypt">🔑 解密</div>
+      </div>
 
-    <div style="margin-top:12px;">
-      <h3>一：创建密文（加密）</h3>
-      <label>要加密的明文：</label>
-      <textarea id="plaintext" placeholder="在此输入你想加密的文本（支持多行）。"></textarea>
-      <div style="margin-top:8px">
-        <label>密码（用于派生密钥）</label>
+      <div id="encrypt-view">
+        <label>明文内容：</label>
+        <textarea id="plaintext" placeholder="输入你想加密的文本"></textarea>
+        <label>密码：</label>
         <input id="enc-password" type="password" placeholder="设置一个强口令">
+        <div class="row">
+          <button class="primary" id="btn-encrypt">生成密文</button>
+          <button class="ghost" id="btn-clear-enc">清空</button>
+        </div>
+        <label>密文：</label>
+        <div class="output-box">
+          <button class="copy-btn" id="copy-cipher">复制</button>
+          <div id="ciphertext-output"></div>
+        </div>
       </div>
-      <div style="margin-top:8px;display:flex;gap:8px">
-        <button id="btn-encrypt">生成密文</button>
-        <button id="btn-clear" class="ghost">清空</button>
-      </div>
-      <p style="margin-top:8px"><small>输出的密文可以复制并粘贴到 Notion 页面中（作为普通文本块）。</small></p>
-      <label>密文（base64，包含 salt+iv+ciphertext）：</label>
-      <textarea id="ciphertext" placeholder="加密后得到的字符串会显示在这里。也可以把已有密文粘贴到此处以供解密。"></textarea>
-    </div>
 
-    <hr style="margin:18px 0">
-
-    <div>
-      <h3>二：解密（输入密文 + 密码）</h3>
-      <label>密文（粘贴或使用上方生成的内容）：</label>
-      <textarea id="ciphertext2" placeholder="把要解密的密文粘到这里"></textarea>
-      <div style="margin-top:8px">
-        <label>密码</label>
+      <div id="decrypt-view" style="display:none;">
+        <label>密文：</label>
+        <textarea id="ciphertext" placeholder="粘贴要解密的密文"></textarea>
+        <label>密码：</label>
         <input id="dec-password" type="password" placeholder="输入密码以解密">
+        <div class="row">
+          <button class="primary" id="btn-decrypt">解密显示明文</button>
+          <button class="ghost" id="btn-clear-dec">清空</button>
+        </div>
+        <label>明文：</label>
+        <div class="output-box">
+          <button class="copy-btn" id="copy-plain">复制</button>
+          <div id="plaintext-output"></div>
+        </div>
       </div>
-      <div style="margin-top:8px;display:flex;gap:8px">
-        <button id="btn-decrypt">解密显示明文</button>
-        <button id="btn-copy-plain" class="ghost">复制明文</button>
-      </div>
-      <p style="margin-top:8px"><small>如果解密失败会有错误提示（常见原因：密码错误或密文损坏）。</small></p>
-      <label>解密结果：</label>
-      <div id="plaintext-output" class="output"></div>
+
+      <footer>
+        免责声明：此页面仅供个人使用示例。请勿用于高敏感信息存储。明文仅在本地浏览器内处理。
+      </footer>
     </div>
-
-    <hr style="margin:18px 0">
-    <div class="hint">
-      <strong>部署与嵌入建议：</strong>
-      <ol>
-        <li>把此文件部署到静态托管（Vercel / Netlify / GitHub Pages / Glitch）。</li>
-        <li>在 Notion 页面中插入 <code>/embed</code> 并粘入你部署后的 URL。</li>
-        <li>在 Notion 中，你可以把密文放到一个文本块并在嵌入页面中粘贴，或将密文直接写入此 HTML（修改页面源代码），使嵌入后默认显示该密文。</li>
-      </ol>
-    </div>
-
-    <p style="margin-top:12px"><small>免责声明：此页面为前端加密示例，适用于个人使用和简单需求。不要把非常高价值的密钥/机密全部依赖于单一前端实现。若需企业级安全，请咨询安全专家与使用经过审计的加密库与后端密钥管理。</small></p>
-
   </div>
 
-<script>
-// ----- 工具函数（Web Crypto API） -----
-const encoder = new TextEncoder();
-const decoder = new TextDecoder();
+  <div id="toast" class="toast"></div>
 
-function randBytes(len){
-  const b = new Uint8Array(len);
-  crypto.getRandomValues(b);
-  return b;
-}
-
-async function deriveKey(password, salt){
-  const baseKey = await crypto.subtle.importKey(
-    'raw', encoder.encode(password), {name:'PBKDF2'}, false, ['deriveKey']
-  );
-  const key = await crypto.subtle.deriveKey(
-    {name:'PBKDF2', salt, iterations:250000, hash:'SHA-256'},
-    baseKey,
-    {name:'AES-GCM', length:256},
-    false,
-    ['encrypt','decrypt']
-  );
-  return key;
-}
-
-function concatUint8(arrays){
-  let length = 0;
-  for(const a of arrays) length += a.byteLength;
-  const out = new Uint8Array(length);
-  let offset = 0;
-  for(const a of arrays){ out.set(new Uint8Array(a), offset); offset += a.byteLength }
-  return out;
-}
-
-function toBase64(u8){
-  // btoa requires binary string
-  let s = '';
-  const chunk = 0x8000;
-  for (let i = 0; i < u8.length; i += chunk) {
-    s += String.fromCharCode.apply(null, u8.subarray(i, i + chunk));
-  }
-  return btoa(s);
-}
-function fromBase64(b64){
-  const binary = atob(b64);
-  const len = binary.length;
-  const bytes = new Uint8Array(len);
-  for (let i = 0; i < len; i++) bytes[i] = binary.charCodeAt(i);
-  return bytes;
-}
-
-// 格式： base64( salt(16) + iv(12) + ciphertext )
-async function encryptText(plaintext, password){
-  const salt = randBytes(16);
-  const iv = randBytes(12);
-  const key = await deriveKey(password, salt);
-  const ct = await crypto.subtle.encrypt({name:'AES-GCM', iv}, key, encoder.encode(plaintext));
-  const combined = concatUint8([salt, iv, new Uint8Array(ct)]);
-  return toBase64(combined);
-}
-
-async function decryptText(b64cipher, password){
-  const combined = fromBase64(b64cipher);
-  if (combined.length < 29) throw new Error('密文太短或格式不对');
-  const salt = combined.slice(0,16);
-  const iv = combined.slice(16,28);
-  const ct = combined.slice(28);
-  const key = await deriveKey(password, salt);
-  const pt = await crypto.subtle.decrypt({name:'AES-GCM', iv}, key, ct);
-  return decoder.decode(pt);
-}
-
-// ----- 绑定 UI -----
-const btnEncrypt = document.getElementById('btn-encrypt');
-const btnClear = document.getElementById('btn-clear');
-const plaintextEl = document.getElementById('plaintext');
-const encPassEl = document.getElementById('enc-password');
-const ciphertextEl = document.getElementById('ciphertext');
-const ciphertext2El = document.getElementById('ciphertext2');
-const decPassEl = document.getElementById('dec-password');
-const btnDecrypt = document.getElementById('btn-decrypt');
-const outEl = document.getElementById('plaintext-output');
-const btnCopyPlain = document.getElementById('btn-copy-plain');
-
-btnEncrypt.addEventListener('click', async ()=>{
-  const pt = plaintextEl.value;
-  const pw = encPassEl.value;
-  outEl.textContent = '';
-  if (!pt) { alert('请先输入要加密的明文'); return; }
-  if (!pw) { alert('请设置密码'); return; }
-  try{
-    btnEncrypt.disabled = true;
-    btnEncrypt.textContent = '加密中……';
-    const ct = await encryptText(pt, pw);
-    ciphertextEl.value = ct;
-    ciphertext2El.value = ct; // 方便解密
-  }catch(e){
-    alert('加密失败：'+e.message);
-  }finally{
-    btnEncrypt.disabled = false; btnEncrypt.textContent = '生成密文';
-  }
-});
-
-btnClear.addEventListener('click', ()=>{
-  plaintextEl.value=''; encPassEl.value=''; ciphertextEl.value=''; ciphertext2El.value=''; decPassEl.value=''; outEl.textContent='';
-});
-
-btnDecrypt.addEventListener('click', async ()=>{
-  const ct = ciphertext2El.value.trim();
-  const pw = decPassEl.value;
-  outEl.textContent='';
-  if (!ct){ alert('请粘贴密文'); return; }
-  if (!pw){ alert('请输入密码'); return; }
-  try{
-    btnDecrypt.disabled = true; btnDecrypt.textContent = '解密中……';
-    const pt = await decryptText(ct, pw);
-    outEl.textContent = pt;
-  }catch(e){
-    outEl.textContent = '解密失败：' + e.message;
-  }finally{
-    btnDecrypt.disabled = false; btnDecrypt.textContent = '解密显示明文';
-  }
-});
-
-btnCopyPlain.addEventListener('click', ()=>{
-  const t = outEl.textContent || '';
-  if (!t) { alert('当前没有可复制的明文'); return; }
-  navigator.clipboard.writeText(t).then(()=>alert('已复制')).catch(()=>alert('复制失败'));
-});
-
-// 如果 URL 中带有 ?cipher=... 或 #cipher=...，则自动填充到 ciphertext2
-(function autoLoadFromUrl(){
-  try{
-    const url = new URL(location.href);
-    const q = url.searchParams.get('cipher');
-    if (q){ ciphertext2El.value = q; }
-    // 支持 hash too
-    if (location.hash && location.hash.includes('cipher=')){
-      const hash = location.hash.substring(1);
-      const params = new URLSearchParams(hash);
-      const hc = params.get('cipher');
-      if (hc) ciphertext2El.value = hc;
+  <script>
+    // Utility for toast
+    function showToast(msg){
+      const t=document.getElementById('toast');
+      t.textContent=msg; t.classList.add('show');
+      setTimeout(()=>t.classList.remove('show'),2000);
     }
-  }catch(e){ /* ignore */ }
-})();
 
-</script>
+    // Tab switching
+    const tabEncrypt=document.getElementById('tab-encrypt');
+    const tabDecrypt=document.getElementById('tab-decrypt');
+    const encView=document.getElementById('encrypt-view');
+    const decView=document.getElementById('decrypt-view');
+    tabEncrypt.onclick=()=>{tabEncrypt.classList.add('active');tabDecrypt.classList.remove('active');encView.style.display='block';decView.style.display='none';}
+    tabDecrypt.onclick=()=>{tabDecrypt.classList.add('active');tabEncrypt.classList.remove('active');decView.style.display='block';encView.style.display='none';}
 
+    const encBtn=document.getElementById('btn-encrypt');
+    const encPwd=document.getElementById('enc-password');
+    const pt=document.getElementById('plaintext');
+    const ctOut=document.getElementById('ciphertext-output');
+    const copyCipher=document.getElementById('copy-cipher');
+    const clearEnc=document.getElementById('btn-clear-enc');
+
+    const decBtn=document.getElementById('btn-decrypt');
+    const decPwd=document.getElementById('dec-password');
+    const ct=document.getElementById('ciphertext');
+    const ptOut=document.getElementById('plaintext-output');
+    const copyPlain=document.getElementById('copy-plain');
+    const clearDec=document.getElementById('btn-clear-dec');
+
+    const encoder=new TextEncoder(); const decoder=new TextDecoder();
+    function randBytes(len){const b=new Uint8Array(len);crypto.getRandomValues(b);return b;}
+    async function deriveKey(password,salt){
+      const baseKey=await crypto.subtle.importKey('raw',encoder.encode(password),{name:'PBKDF2'},false,['deriveKey']);
+      return await crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:250000,hash:'SHA-256'},baseKey,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
+    }
+    function concatUint8(arr){let len=0;for(const a of arr)len+=a.byteLength;const o=new Uint8Array(len);let off=0;for(const a of arr){o.set(new Uint8Array(a),off);off+=a.byteLength;}return o;}
+    function toB64(u8){let s='';const ch=0x8000;for(let i=0;i<u8.length;i+=ch){s+=String.fromCharCode.apply(null,u8.subarray(i,i+ch));}return btoa(s);}
+    function fromB64(b64){const bin=atob(b64);const len=bin.length;const bytes=new Uint8Array(len);for(let i=0;i<len;i++)bytes[i]=bin.charCodeAt(i);return bytes;}
+
+    async function encryptText(text,pwd){const salt=randBytes(16);const iv=randBytes(12);const key=await deriveKey(pwd,salt);const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,encoder.encode(text));return toB64(concatUint8([salt,iv,new Uint8Array(ct)]));}
+    async function decryptText(b64,pwd){const data=fromB64(b64);const salt=data.slice(0,16),iv=data.slice(16,28),ct=data.slice(28);const key=await deriveKey(pwd,salt);const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv},key,ct);return decoder.decode(pt);}
+
+    encBtn.onclick=async()=>{
+      const text=pt.value.trim(); const pwd=encPwd.value;
+      if(!text){showToast('请输入明文');return;}
+      if(!pwd){showToast('请输入密码');return;}
+      encBtn.disabled=true; encBtn.textContent='加密中…';
+      try{const cipher=await encryptText(text,pwd);ctOut.textContent=cipher;showToast('加密成功');}
+      catch(e){showToast('加密失败');}
+      finally{encBtn.disabled=false; encBtn.textContent='生成密文';}
+    }
+
+    decBtn.onclick=async()=>{
+      const cipher=ct.value.trim(); const pwd=decPwd.value;
+      if(!cipher){showToast('请输入密文');return;}
+      if(!pwd){showToast('请输入密码');return;}
+      decBtn.disabled=true; decBtn.textContent='解密中…';
+      try{const text=await decryptText(cipher,pwd);ptOut.textContent=text;showToast('解密成功');}
+      catch(e){ptOut.textContent='';showToast('解密失败或密码错误');}
+      finally{decBtn.disabled=false; decBtn.textContent='解密显示明文';}
+    }
+
+    copyCipher.onclick=()=>{const t=ctOut.textContent;if(!t){showToast('无密文');return;}navigator.clipboard.writeText(t).then(()=>{showToast('密文已复制');});}
+    copyPlain.onclick=()=>{const t=ptOut.textContent;if(!t){showToast('无明文');return;}navigator.clipboard.writeText(t).then(()=>{showToast('明文已复制');});}
+    clearEnc.onclick=()=>{pt.value='';encPwd.value='';ctOut.textContent='';}
+    clearDec.onclick=()=>{ct.value='';decPwd.value='';ptOut.textContent='';}
+  </script>
 </body>
 </html>
