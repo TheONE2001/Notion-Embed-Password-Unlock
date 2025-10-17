@@ -5,23 +5,12 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Notion 嵌入 - 密码解锁内容</title>
   <style>
-    :root { color-scheme: light dark; }
     body {
       margin: 0;
       font-family: system-ui, -apple-system, Segoe UI, Roboto, PingFang SC, Helvetica, Arial;
       line-height: 1.5;
       background: linear-gradient(135deg, #f8fafc, #eef2ff);
       color: #1e293b;
-      transition: background 0.3s, color 0.3s;
-    }
-    @media (prefers-color-scheme: dark) {
-      body {
-        background: linear-gradient(135deg, #0f172a, #1e293b);
-        color: #e2e8f0;
-      }
-      .card { background: #1e293b; box-shadow: 0 6px 16px rgba(0,0,0,0.3); }
-      textarea, input { background: #0f172a; color: #e2e8f0; border: 1px solid #334155; }
-      .copy-btn, .reset-btn { background: #334155; color: #e2e8f0; }
     }
     .container { display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
     .card {
@@ -86,7 +75,7 @@
         <label>明文内容：</label>
         <textarea id="plaintext" placeholder="输入你想加密的文本"></textarea>
         <label>密码：</label>
-        <input id="enc-password" type="password" placeholder="设置一个口令">
+        <input id="enc-password" type="password" placeholder="设置一个强口令">
         <div class="row">
           <button class="primary" id="btn-encrypt">生成密文</button>
           <button class="ghost" id="btn-clear-enc">清空</button>
@@ -190,7 +179,7 @@
 
     clearEnc.onclick=()=>{pt.value='';encPwd.value='';ctOut.textContent='';}
     clearDec.onclick=()=>{ct.value='';decPwd.value='';ptOut.textContent='';}
-    resetAll.onclick=()=>{pt.value='';encPwd.value='';ctOut.textContent='';ct.value='';decPwd.value='';ptOut.textContent='';showToast('所有页面内容已重置');}
+    resetAll.onclick=()=>{pt.value='';encPwd.value='';ctOut.textContent='';ct.value='';decPwd.value='';ptOut.textContent='';showToast('所有内容已重置');}
   </script>
 </body>
 </html>
