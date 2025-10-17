@@ -23,16 +23,10 @@
 
 ## 使用方法
 
-1. 克隆或下载本项目：
-
-   ```bash
-   git clone <项目地址>
-   ```
-2. 将 `index.html` 上传到 GitHub 仓库，并启用 **GitHub Pages**。
-3. 获取 GitHub Pages 的链接，将其 **嵌入到 Notion 页面**：
-
+1. 将 GitHub Pages 的链接（https://theone2001.github.io/Notion-Embed-Password-Unlock/） **嵌入到 Notion 页面**：
    * 在 Notion 页面中选择“/embed”，粘贴 GitHub Pages 链接即可。
-4. 打开 Notion 页面，即可使用加密/解密功能。
+2. 打开 Notion 页面，即可使用加密/解密功能。
+3. （可选）对于重要内容，建议将项目克隆到本地，并上传至个人代码托管平台，以防未来 GitHub Pages 链接出现不确定性。
 
 ## 文件说明
 
@@ -42,4 +36,3 @@
 
 * 本工具仅在前端浏览器中进行加密和解密，**内容不会上传服务器**。
 * 不要在此工具中存储非常敏感的信息，如银行账号或密码等。
-* 确保在支持现代浏览器（Chrome、Firefox、Edge、Safari 等）中使用，以保证加密算法正常运行。
