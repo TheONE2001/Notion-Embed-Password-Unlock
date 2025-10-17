@@ -2,7 +2,7 @@
 
 ## 简介
 
-这是一个前端实现的 **密码加密/解密网页工具**，可以直接嵌入到 Notion 页面中，实现内容的本地加密和解密。所有加密和解密操作都在用户的浏览器中完成，不会上传到服务器，保证内容隐私。
+这是一个前端实现的 **密码加密/解密文本**的网页工具，可以直接嵌入到 Notion 页面中，实现内容的本地加密和解密。所有加密和解密操作都在用户的浏览器中完成，不会上传到服务器，保证内容隐私。
 
 ## 功能特点
 
@@ -23,7 +23,7 @@
 
 ## 使用方法
 
-1. 将 GitHub Pages 的链接（https://theone2001.github.io/Notion-Embed-Password-Unlock/） **嵌入到 Notion 页面**：
+1. 将 GitHub Pages 的链接（[https://theone2001.github.io/Notion-Embed-Password-Unlock/](https://theone2001.github.io/Notion-Embed-Password-Unlock/)） **嵌入到 Notion 页面**：
    * 在 Notion 页面中选择“/embed”，粘贴 GitHub Pages 链接即可。
 2. 打开 Notion 页面，即可使用加密/解密功能。
 3. （可选）对于重要内容，建议将项目克隆到本地，并上传至个人代码托管平台，以防未来 GitHub Pages 链接出现不确定性。
